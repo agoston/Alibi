@@ -20,7 +20,6 @@ import app.myzel394.alibi.db.AppSettings
 import app.myzel394.alibi.db.RecordingInformation
 import app.myzel394.alibi.helpers.AudioBatchesFolder
 import app.myzel394.alibi.helpers.BatchesFolder
-import app.myzel394.alibi.helpers.VideoBatchesFolder
 import app.myzel394.alibi.services.IntervalRecorderService
 import app.myzel394.alibi.ui.components.RecorderScreen.atoms.BatchesInaccessibleDialog
 import app.myzel394.alibi.ui.components.RecorderScreen.atoms.RecorderErrorDialog
@@ -28,7 +27,6 @@ import app.myzel394.alibi.ui.components.RecorderScreen.atoms.RecorderProcessingD
 import app.myzel394.alibi.ui.effects.rememberOpenUri
 import app.myzel394.alibi.ui.models.AudioRecorderModel
 import app.myzel394.alibi.ui.models.BaseRecorderModel
-import app.myzel394.alibi.ui.models.VideoRecorderModel
 import app.myzel394.alibi.ui.utils.rememberFileSaverDialog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
@@ -48,7 +46,6 @@ fun RecorderEventsHandler(
     settings: AppSettings,
     snackbarHostState: SnackbarHostState,
     audioRecorder: AudioRecorderModel,
-    videoRecorder: VideoRecorderModel,
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -75,22 +72,6 @@ fun RecorderEventsHandler(
             }
         }
     }
-    val saveVideoFile = rememberFileSaverDialog(settings.videoRecorderSettings.getMimeType()) {
-        if (settings.deleteRecordingsImmediately) {
-            runCatching {
-                videoRecorder.batchesFolder?.deleteRecordings()
-            }
-        }
-
-        if (videoRecorder.batchesFolder?.hasRecordingsAvailable() == false) {
-            scope.launch {
-                dataStore.updateData {
-                    it.setLastRecording(null)
-                }
-            }
-        }
-    }
-
     suspend fun saveAsLastRecording(
         recorder: RecorderModel
     ) {
@@ -163,19 +144,10 @@ fun RecorderEventsHandler(
                             ?: settings.lastRecording
                             ?: throw Exception("No recording information available")
 
-                    val batchesFolder = when (recorder.javaClass) {
-                        AudioRecorderModel::class.java -> AudioBatchesFolder.importFromFolder(
-                            recording.folderPath,
-                            context
-                        )
-
-                        VideoRecorderModel::class.java -> VideoBatchesFolder.importFromFolder(
-                            recording.folderPath,
-                            context
-                        )
-
-                        else -> throw Exception("Unknown recorder type")
-                    }
+                    val batchesFolder = AudioBatchesFolder.importFromFolder(
+                        recording.folderPath,
+                        context
+                    )
 
                     val fileName = batchesFolder.getName(
                         recording.recordingStart,
@@ -194,19 +166,9 @@ fun RecorderEventsHandler(
                     // Save file
                     when (batchesFolder.type) {
                         BatchesFolder.BatchType.INTERNAL -> {
-                            when (batchesFolder) {
-                                is AudioBatchesFolder -> {
-                                    saveAudioFile(
-                                        batchesFolder.asInternalGetOutputFile(fileName), fileName
-                                    )
-                                }
-
-                                is VideoBatchesFolder -> {
-                                    saveVideoFile(
-                                        batchesFolder.asInternalGetOutputFile(fileName), fileName
-                                    )
-                                }
-                            }
+                            saveAudioFile(
+                                batchesFolder.asInternalGetOutputFile(fileName), fileName
+                            )
                         }
 
                         BatchesFolder.BatchType.CUSTOM -> {
@@ -291,57 +253,6 @@ fun RecorderEventsHandler(
                     throw NotImplementedError("onRecordingSave should not be called now")
                 }
                 audioRecorder.onError = {}
-            }
-        }
-    }
-
-    // Register video recorder events
-    var previousVideoSettings: AppSettings? = null
-    DisposableEffect(settings) {
-        if (previousVideoSettings == settings) {
-            onDispose { }
-        } else {
-            previousVideoSettings = settings
-            Log.i("Alibi", "===== Registering videoRecorder events $videoRecorder")
-            videoRecorder.onRecordingSave = { cleanupOldFiles ->
-                saveRecording(videoRecorder as RecorderModel, cleanupOldFiles)
-            }
-            videoRecorder.onRecordingStart = {
-                snackbarHostState.currentSnackbarData?.dismiss()
-            }
-            videoRecorder.onError = {
-                scope.launch {
-                    saveAsLastRecording(videoRecorder as RecorderModel)
-
-                    runCatching {
-                        videoRecorder.stopRecording(context)
-                    }
-                    runCatching {
-                        videoRecorder.destroyService(context)
-                    }
-
-                    showRecorderError = true
-                }
-            }
-            videoRecorder.onBatchesFolderNotAccessible = {
-                scope.launch {
-                    showBatchesInaccessibleError = true
-
-                    runCatching {
-                        videoRecorder.stopRecording(context)
-                    }
-                    runCatching {
-                        videoRecorder.destroyService(context)
-                    }
-                }
-            }
-
-            onDispose {
-                Log.i("Alibi", "===== Disposing videoRecorder events")
-                videoRecorder.onRecordingSave = {
-                    throw NotImplementedError("onRecordingSave should not be called now")
-                }
-                videoRecorder.onError = {}
             }
         }
     }

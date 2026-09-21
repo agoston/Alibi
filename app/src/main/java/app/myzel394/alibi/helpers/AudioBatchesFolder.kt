@@ -8,14 +8,14 @@ import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import androidx.annotation.RequiresApi
 import androidx.documentfile.provider.DocumentFile
-import app.myzel394.alibi.helpers.MediaConverter.Companion.concatenateAudioFiles
 import app.myzel394.alibi.ui.AUDIO_RECORDING_BATCHES_SUBFOLDER_NAME
 import app.myzel394.alibi.ui.MEDIA_SUBFOLDER_NAME
 import app.myzel394.alibi.ui.RECORDER_INTERNAL_SELECTED_VALUE
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
-import com.arthenica.ffmpegkit.FFmpegKitConfig
 import java.io.File
 import java.io.FileDescriptor
+import java.io.FileOutputStream
+import java.io.OutputStream
 import java.time.LocalDateTime
 
 class AudioBatchesFolder(
@@ -29,30 +29,22 @@ class AudioBatchesFolder(
     customFolder,
     subfolderName,
 ) {
-    override val concatenationFunction = ::concatenateAudioFiles
-    override val ffmpegParameters = FFMPEG_PARAMETERS
     override val scopedMediaContentUri: Uri = SCOPED_MEDIA_CONTENT_URI
     override val legacyMediaFolder = LEGACY_MEDIA_FOLDER
 
     private var customFileFileDescriptor: ParcelFileDescriptor? = null
     private var mediaFileFileDescriptor: ParcelFileDescriptor? = null
 
-    override fun getOutputFileForFFmpeg(
-        date: LocalDateTime,
-        extension: String,
-        fileName: String,
-    ): String {
+    override fun openOutputStream(fileName: String, extension: String): OutputStream {
         return when (type) {
-            BatchType.INTERNAL -> asInternalGetOutputFile(fileName).absolutePath
+            BatchType.INTERNAL -> FileOutputStream(asInternalGetOutputFile(fileName))
 
             BatchType.CUSTOM -> {
-                FFmpegKitConfig.getSafParameterForWrite(
-                    context,
-                    (customFolder!!.findFile(fileName) ?: customFolder.createFile(
-                        "audio/${extension}",
-                        fileName,
-                    )!!).uri
+                val file = customFolder!!.findFile(fileName) ?: customFolder.createFile(
+                    "audio/${extension}",
+                    fileName,
                 )!!
+                context.contentResolver.openOutputStream(file.uri)!!
             }
 
             BatchType.MEDIA -> {
@@ -63,20 +55,14 @@ class AudioBatchesFolder(
                         relativePath = BASE_SCOPED_STORAGE_RELATIVE_PATH + "/" + MEDIA_SUBFOLDER_NAME,
                     )
 
-                    return FFmpegKitConfig.getSafParameterForWrite(
-                        context,
-                        mediaUri
-                    )!!
+                    context.contentResolver.openOutputStream(mediaUri)!!
                 } else {
                     val path = arrayOf(
                         Environment.getExternalStoragePublicDirectory(BASE_LEGACY_STORAGE_FOLDER),
                         MEDIA_SUBFOLDER_NAME,
                         fileName,
                     ).joinToString("/")
-                    return File(path)
-                        .apply {
-                            createNewFile()
-                        }.absolutePath
+                    FileOutputStream(File(path).apply { createNewFile() })
                 }
             }
         }
@@ -157,20 +143,6 @@ class AudioBatchesFolder(
         val LEGACY_MEDIA_FOLDER = File(
             Environment.getExternalStoragePublicDirectory(BASE_LEGACY_STORAGE_FOLDER),
             MEDIA_RECORDINGS_SUBFOLDER,
-        )
-
-
-        // Parameters to be passed in descending order
-        // Those parameters first try to concatenate without re-encoding
-        // if that fails, it'll try several fallback methods
-        // this is audio only
-        val FFMPEG_PARAMETERS = arrayOf(
-            " -c copy",
-            " -acodec copy",
-            " -c:a aac",
-            " -c:a libmp3lame",
-            " -c:a libopus",
-            " -c:a libvorbis",
         )
     }
 }

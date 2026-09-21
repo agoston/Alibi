@@ -24,12 +24,13 @@ import app.myzel394.alibi.ui.RECORDER_INTERNAL_SELECTED_VALUE
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
 import app.myzel394.alibi.ui.SUPPORTS_SCOPED_STORAGE
 import app.myzel394.alibi.ui.utils.PermissionHelper
-import com.arthenica.ffmpegkit.FFmpegKitConfig
-import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.reflect.KFunction4
 
 
 abstract class BatchesFolder(
@@ -38,8 +39,6 @@ abstract class BatchesFolder(
     open val customFolder: DocumentFile? = null,
     open val subfolderName: String = ".recordings",
 ) {
-    abstract val concatenationFunction: KFunction4<Iterable<String>, String, String, (Int) -> Unit, CompletableDeferred<Unit>>
-    abstract val ffmpegParameters: Array<String>
     abstract val scopedMediaContentUri: Uri
     abstract val legacyMediaFolder: File
 
@@ -117,7 +116,9 @@ abstract class BatchesFolder(
         }
     }
 
-    fun getBatchesForFFmpeg(): List<String> {
+    // Returns the recording batches as URIs, sorted by their numeric counter.
+    // INTERNAL batches are returned as file:// URIs; CUSTOM/MEDIA as content://.
+    fun getSortedBatchUris(): List<Uri> {
         return when (type) {
             BatchType.INTERNAL ->
                 ((getInternalFolder()
@@ -130,7 +131,7 @@ abstract class BatchesFolder(
                     .sortedBy {
                         it.nameWithoutExtension.toInt()
                     }
-                    .map { it.absolutePath }
+                    .map { Uri.fromFile(it) }
 
             BatchType.CUSTOM -> getCustomDefinedFolder()
                 .listFiles()
@@ -140,12 +141,7 @@ abstract class BatchesFolder(
                 .sortedBy {
                     it.name!!.substringBeforeLast(".").toInt()
                 }
-                .map {
-                    FFmpegKitConfig.getSafParameterForRead(
-                        context,
-                        it.uri,
-                    )!!
-                }
+                .map { it.uri }
 
             BatchType.MEDIA -> {
                 val fileUris = mutableListOf<Pair<String, Uri>>()
@@ -169,17 +165,17 @@ abstract class BatchesFolder(
                             .substringBeforeLast(".")
                             .toInt()
                     }
-                    .map { pair ->
-                        val uri = pair.second
-
-                        FFmpegKitConfig.getSafParameterForRead(
-                            context,
-                            uri,
-                        )!!
-                    }
+                    .map { it.second }
             }
         }
     }
+
+    fun getBatchCount(): Int = getSortedBatchUris().size
+
+    // Opens an InputStream for each batch, in order. `content://` and `file://`
+    // URIs are both handled by the ContentResolver.
+    fun getBatchInputStreams(): List<InputStream> =
+        getSortedBatchUris().map { context.contentResolver.openInputStream(it)!! }
 
     fun getName(date: LocalDateTime, extension: String): String {
         val name = date
@@ -234,65 +230,43 @@ abstract class BatchesFolder(
         }
     }
 
-    abstract fun getOutputFileForFFmpeg(
-        date: LocalDateTime,
-        extension: String,
-        fileName: String,
-    ): String
+    // Opens an OutputStream for the final concatenated recording, creating the
+    // destination file (INTERNAL file, CUSTOM DocumentFile, or MEDIA MediaStore
+    // entry) as needed.
+    abstract fun openOutputStream(fileName: String, extension: String): OutputStream
 
     abstract fun cleanup()
 
+    // Concatenates all recording batches into a single file by appending their
+    // bytes (see MediaConverter). Returns the output file name.
     suspend fun concatenate(
         recording: RecordingInformation,
         filenameFormat: AppSettings.FilenameFormat,
         disableCache: Boolean? = null,
-        onNextParameterTry: (String) -> Unit = {},
         onProgress: (Float?) -> Unit = {},
         fileName: String,
     ): String {
         val disableCache = disableCache ?: (type != BatchType.INTERNAL)
-        val date = recording.getStartDateForFilename(filenameFormat)
 
-        if (!disableCache && checkIfOutputAlreadyExists(fileName)
-        ) {
-            return getOutputFileForFFmpeg(
-                date = recording.recordingStart,
-                extension = recording.fileExtension,
-                fileName = fileName,
-            )
+        if (!disableCache && checkIfOutputAlreadyExists(fileName)) {
+            return fileName
         }
 
-        for (parameter in ffmpegParameters) {
-            Log.i("Concatenation", "Trying parameter $parameter")
-            onNextParameterTry(parameter)
-            onProgress(null)
+        onProgress(null)
 
-            try {
-                val fullTime = recording.getFullDuration().toFloat();
-                val filePaths = getBatchesForFFmpeg()
+        withContext(Dispatchers.IO) {
+            val inputs = getBatchInputStreams()
+            val total = inputs.size.toFloat()
+            val output = openOutputStream(fileName, recording.fileExtension)
 
-                val outputFile = getOutputFileForFFmpeg(
-                    date = date,
-                    extension = recording.fileExtension,
-                    fileName = fileName,
-                )
-
-                concatenationFunction(
-                    filePaths,
-                    outputFile,
-                    parameter
-                ) { time ->
-                    // The progressbar for the conversion is calculated based on the
-                    // current time of the conversion and the total time of the batches.
-                    onProgress(time / fullTime)
-                }.await()
-                return outputFile
-            } catch (e: MediaConverter.FFmpegException) {
-                continue
+            MediaConverter.concatenateStreams(inputs, output) { batchesDone ->
+                if (total > 0) {
+                    onProgress(batchesDone / total)
+                }
             }
         }
 
-        throw MediaConverter.FFmpegException("Failed to concatenate")
+        return fileName
     }
 
     fun exportFolderForSettings(): String {
@@ -547,13 +521,13 @@ abstract class BatchesFolder(
             BatchType.MEDIA ->
                 if (SUPPORTS_SCOPED_STORAGE)
                     File(
-                        Environment.getExternalStoragePublicDirectory(VideoBatchesFolder.BASE_SCOPED_STORAGE_RELATIVE_PATH),
+                        Environment.getExternalStoragePublicDirectory(AudioBatchesFolder.BASE_SCOPED_STORAGE_RELATIVE_PATH),
                         Media.EXTERNAL_CONTENT_URI.toString(),
                     )
                 else
                     File(
-                        Environment.getExternalStoragePublicDirectory(VideoBatchesFolder.BASE_LEGACY_STORAGE_FOLDER),
-                        VideoBatchesFolder.MEDIA_RECORDINGS_SUBFOLDER,
+                        Environment.getExternalStoragePublicDirectory(AudioBatchesFolder.BASE_LEGACY_STORAGE_FOLDER),
+                        AudioBatchesFolder.MEDIA_RECORDINGS_SUBFOLDER,
                     )
 
             BatchType.CUSTOM -> throw IllegalArgumentException("This code should not be reachable")

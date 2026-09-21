@@ -4,11 +4,8 @@ import android.Manifest
 import android.content.Context
 import android.media.MediaRecorder
 import android.os.Build
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
 import app.myzel394.alibi.R
 import app.myzel394.alibi.helpers.AudioBatchesFolder
-import app.myzel394.alibi.helpers.VideoBatchesFolder
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
 import app.myzel394.alibi.ui.SUPPORTS_SCOPED_STORAGE
 import app.myzel394.alibi.ui.components.RecorderScreen.organisms.RecorderModel
@@ -20,7 +17,6 @@ import java.time.LocalDateTime
 @Serializable
 data class AppSettings(
     val audioRecorderSettings: AudioRecorderSettings = AudioRecorderSettings.getDefaultInstance(),
-    val videoRecorderSettings: VideoRecorderSettings = VideoRecorderSettings.getDefaultInstance(),
 
     val appLockSettings: AppLockSettings? = null,
 
@@ -47,10 +43,6 @@ data class AppSettings(
 
     fun setAudioRecorderSettings(audioRecorderSettings: AudioRecorderSettings): AppSettings {
         return copy(audioRecorderSettings = audioRecorderSettings)
-    }
-
-    fun setVideoRecorderSettings(videoRecorderSettings: VideoRecorderSettings): AppSettings {
-        return copy(videoRecorderSettings = videoRecorderSettings)
     }
 
     fun setNotificationSettings(notificationSettings: NotificationSettings?): AppSettings {
@@ -174,8 +166,8 @@ data class RecordingInformation(
             Type.AUDIO -> AudioBatchesFolder.importFromFolder(folderPath, context)
                 .hasRecordingsAvailable()
 
-            Type.VIDEO -> VideoBatchesFolder.importFromFolder(folderPath, context)
-                .hasRecordingsAvailable()
+            // Video recording was removed; any legacy VIDEO recording is unsupported.
+            Type.VIDEO -> false
         }
 
     fun getStartDateForFilename(filenameFormat: AppSettings.FilenameFormat): LocalDateTime {
@@ -442,93 +434,6 @@ data class AudioRecorderSettings(
                 }
             }
         }).toMap()
-    }
-}
-
-@Serializable
-data class VideoRecorderSettings(
-    val targetedVideoBitRate: Int? = null,
-    val quality: String? = null,
-    val targetFrameRate: Int? = null,
-) {
-    fun setTargetedVideoBitRate(bitRate: Int?): VideoRecorderSettings {
-        return copy(targetedVideoBitRate = bitRate)
-    }
-
-    fun setQuality(quality: Quality?): VideoRecorderSettings {
-        val invertedMap = QUALITY_NAME_QUALITY_MAP.entries.associateBy({ it.value }, { it.key })
-
-        return copy(quality = quality?.let { invertedMap[it] })
-    }
-
-    fun setTargetFrameRate(frameRate: Int?): VideoRecorderSettings {
-        return copy(targetFrameRate = frameRate)
-    }
-
-    fun getQuality(): Quality? =
-        quality?.let {
-            QUALITY_NAME_QUALITY_MAP[it]!!
-        }
-
-    fun getQualitySelector(): QualitySelector? =
-        quality?.let {
-            QualitySelector.from(
-                QUALITY_NAME_QUALITY_MAP[it]!!
-            )
-        }
-
-    fun getMimeType() = "video/$fileExtension"
-
-    val fileExtension
-        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "mp4" else "3gp"
-
-    companion object {
-        fun getDefaultInstance() = VideoRecorderSettings()
-
-        val QUALITY_NAME_QUALITY_MAP: Map<String, Quality> = mapOf(
-            "LOWEST" to Quality.LOWEST,
-            "HIGHEST" to Quality.HIGHEST,
-            "SD" to Quality.SD,
-            "HD" to Quality.HD,
-            "FHD" to Quality.FHD,
-            "UHD" to Quality.UHD,
-        )
-
-        val EXAMPLE_BITRATE_VALUES = listOf(
-            null,
-            500 * 1000,
-            // 1 Mbps
-            1 * 1000 * 1000,
-            2 * 1000 * 1000,
-            4 * 1000 * 1000,
-            8 * 1000 * 1000,
-            16 * 1000 * 1000,
-            32 * 1000 * 1000,
-            50 * 1000 * 1000,
-            100 * 1000 * 1000,
-        )
-
-        val EXAMPLE_FRAME_RATE_VALUES = listOf(
-            null,
-            24,
-            30,
-            60,
-            120,
-            240,
-        )
-
-        val AVAILABLE_QUALITIES = listOf(
-            Quality.HIGHEST,
-            Quality.UHD,
-            Quality.FHD,
-            Quality.HD,
-            Quality.SD,
-            Quality.LOWEST,
-        )
-
-        val EXAMPLE_QUALITY_VALUES = listOf(
-            null,
-        ) + AVAILABLE_QUALITIES
     }
 }
 

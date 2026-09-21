@@ -43,8 +43,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.myzel394.alibi.R
 import app.myzel394.alibi.db.AppSettings
+import app.myzel394.alibi.helpers.AudioBatchesFolder
 import app.myzel394.alibi.helpers.BatchesFolder
-import app.myzel394.alibi.helpers.VideoBatchesFolder
 import app.myzel394.alibi.ui.BIG_PRIMARY_BUTTON_SIZE
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
 import app.myzel394.alibi.ui.SUPPORTS_SCOPED_STORAGE
@@ -70,7 +70,7 @@ fun SaveFolderPage(
     // Instead, we fetch this in a different thread and update the state when we have the result.
     LaunchedEffect(appSettings, context) {
         thread {
-            val availableBytes = VideoBatchesFolder.viaInternalFolder(context).getAvailableBytes()
+            val availableBytes = AudioBatchesFolder.viaInternalFolder(context).getAvailableBytes()
 
             if (availableBytes == null) {
                 isLowOnStorage = false

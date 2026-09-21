@@ -19,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Cancel
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Folder
@@ -63,14 +62,11 @@ import app.myzel394.alibi.dataStore
 import app.myzel394.alibi.db.AppSettings
 import app.myzel394.alibi.helpers.AudioBatchesFolder
 import app.myzel394.alibi.helpers.BatchesFolder
-import app.myzel394.alibi.helpers.VideoBatchesFolder
 import app.myzel394.alibi.ui.AUDIO_RECORDING_BATCHES_SUBFOLDER_NAME
 import app.myzel394.alibi.ui.MEDIA_SUBFOLDER_NAME
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
 import app.myzel394.alibi.ui.SHEET_BOTTOM_OFFSET
-import app.myzel394.alibi.ui.SUPPORTS_SAVING_VIDEOS_IN_CUSTOM_FOLDERS
 import app.myzel394.alibi.ui.SUPPORTS_SCOPED_STORAGE
-import app.myzel394.alibi.ui.VIDEO_RECORDING_BATCHES_SUBFOLDER_NAME
 import app.myzel394.alibi.ui.components.SettingsScreen.atoms.FolderBreadcrumbs
 import app.myzel394.alibi.ui.components.atoms.MessageBox
 import app.myzel394.alibi.ui.components.atoms.MessageType
@@ -409,37 +405,12 @@ fun DCIMFolderExplanationDialog(
                         )
                         Box {}
                     }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(16.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = null,
-                        )
-                        FolderBreadcrumbs(
-                            folders = listOf(
-                                if (SUPPORTS_SCOPED_STORAGE)
-                                    VideoBatchesFolder.BASE_SCOPED_STORAGE_RELATIVE_PATH
-                                else
-                                    VideoBatchesFolder.BASE_LEGACY_STORAGE_FOLDER,
-                                MEDIA_SUBFOLDER_NAME
-                            )
-                        )
-                        Box {}
-                    }
                 }
                 Text(
                     stringResource(
                         R.string.ui_settings_option_saveFolder_explainMediaFolder_subfoldersExplanation,
                         AUDIO_RECORDING_BATCHES_SUBFOLDER_NAME,
-                        VIDEO_RECORDING_BATCHES_SUBFOLDER_NAME
+                        AUDIO_RECORDING_BATCHES_SUBFOLDER_NAME
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -566,31 +537,11 @@ private fun SelectionSheet(
 
             HorizontalDivider()
 
-            Column {
-                SelectionButton(
-                    label = stringResource(R.string.ui_settings_option_saveFolder_action_custom_label),
-                    icon = Icons.Default.Folder,
-                    onClick = selectFolder,
-                )
-                if (!SUPPORTS_SAVING_VIDEOS_IN_CUSTOM_FOLDERS) {
-                    Column(
-                        modifier = Modifier
-                            .padding(horizontal = 32.dp, vertical = 12.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        MessageBox(
-                            type = MessageType.INFO,
-                            message = stringResource(R.string.ui_settings_option_saveFolder_videoUnsupported),
-                        )
-                        Text(
-                            stringResource(R.string.ui_minApiRequired, 8, 26),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                    }
-                }
-            }
+            SelectionButton(
+                label = stringResource(R.string.ui_settings_option_saveFolder_action_custom_label),
+                icon = Icons.Default.Folder,
+                onClick = selectFolder,
+            )
         }
     }
 }

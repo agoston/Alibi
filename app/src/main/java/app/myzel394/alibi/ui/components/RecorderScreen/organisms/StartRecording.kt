@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,25 +47,19 @@ import app.myzel394.alibi.ui.BIG_PRIMARY_BUTTON_SIZE
 import app.myzel394.alibi.ui.components.RecorderScreen.atoms.LowStorageInfo
 import app.myzel394.alibi.ui.components.RecorderScreen.molecules.AudioRecordingStart
 import app.myzel394.alibi.ui.components.RecorderScreen.molecules.QuickMaxDurationSelector
-import app.myzel394.alibi.ui.components.RecorderScreen.molecules.VideoRecordingStart
 import app.myzel394.alibi.ui.effects.rememberForceUpdateOnLifeCycleChange
 import app.myzel394.alibi.ui.models.AudioRecorderModel
-import app.myzel394.alibi.ui.models.VideoRecorderModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
 fun StartRecording(
     audioRecorder: AudioRecorderModel,
-    videoRecorder: VideoRecorderModel,
     // Loading this from parent, because if we load it ourselves
     // and permissions have already been granted, initial
     // settings will be used, instead of the actual settings.
     appSettings: AppSettings,
     onSaveLastRecording: () -> Unit,
-    onHideTopBar: () -> Unit,
-    onShowTopBar: () -> Unit,
-    showAudioRecorder: Boolean,
 ) {
     val context = LocalContext.current
     val orientation = LocalConfiguration.current.orientation
@@ -112,48 +105,13 @@ fun StartRecording(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            when (orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (showAudioRecorder)
-                            AudioRecordingStart(
-                                audioRecorder = audioRecorder,
-                                appSettings = appSettings,
-                            )
-                        VideoRecordingStart(
-                            videoRecorder = videoRecorder,
-                            appSettings = appSettings,
-                            onHideAudioRecording = onHideTopBar,
-                            onShowAudioRecording = onShowTopBar,
-                            showPreview = !showAudioRecorder,
-                        )
-                    }
-                }
+            Spacer(modifier = Modifier.weight(1f))
 
-                else -> {
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    if (showAudioRecorder)
-                        AudioRecordingStart(
-                            audioRecorder = audioRecorder,
-                            appSettings = appSettings,
-                            useLargeButtons = isLargeDisplay,
-                        )
-                    VideoRecordingStart(
-                        videoRecorder = videoRecorder,
-                        appSettings = appSettings,
-                        onHideAudioRecording = onHideTopBar,
-                        onShowAudioRecording = onShowTopBar,
-                        showPreview = !showAudioRecorder,
-                        useLargeButtons = isLargeDisplay,
-                    )
-                }
-            }
-
+            AudioRecordingStart(
+                audioRecorder = audioRecorder,
+                appSettings = appSettings,
+                useLargeButtons = isLargeDisplay,
+            )
 
             val forceUpdate = rememberForceUpdateOnLifeCycleChange()
             Column(
@@ -188,7 +146,7 @@ fun StartRecording(
                         Text(label)
                     }
                 } else {
-                    Row(
+                    androidx.compose.foundation.layout.Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Image(

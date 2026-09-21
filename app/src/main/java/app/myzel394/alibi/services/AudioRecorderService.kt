@@ -1,22 +1,33 @@
 package app.myzel394.alibi.services
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaRecorder
 import android.media.MediaRecorder.OnErrorListener
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import androidx.core.app.ServiceCompat
+import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.lifecycleScope
 import app.myzel394.alibi.NotificationHelper
+import app.myzel394.alibi.SERVICE_ACTION_START
+import app.myzel394.alibi.SERVICE_ACTION_STOP
+import app.myzel394.alibi.dataStore
+import app.myzel394.alibi.db.AppSettings
 import app.myzel394.alibi.db.RecordingInformation
 import app.myzel394.alibi.enums.RecorderState
 import app.myzel394.alibi.helpers.AudioBatchesFolder
 import app.myzel394.alibi.helpers.BatchesFolder
+import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
 import app.myzel394.alibi.ui.utils.MicrophoneInfo
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class AudioRecorderService :
     IntervalRecorderService<RecordingInformation, AudioBatchesFolder>() {
@@ -93,6 +104,86 @@ class AudioRecorderService :
                 0
             },
         )
+    }
+
+    // ==== Headless control (e.g. from Tasker via RecorderIntentReceiver) ====
+    // Lets the recording be started/saved without any UI or bound ViewModel.
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            SERVICE_ACTION_START -> {
+                // Go foreground immediately to satisfy the startForegroundService()
+                // deadline, then set up and start recording once settings are read.
+                if (state != RecorderState.RECORDING) {
+                    startForegroundService()
+
+                    lifecycleScope.launch {
+                        val appSettings = applicationContext.dataStore.data.first()
+                        settings = appSettings
+                        batchesFolder = createBatchesFolder(appSettings)
+                        clearAllRecordings()
+                        startRecording()
+                    }
+                }
+                return START_STICKY
+            }
+
+            SERVICE_ACTION_STOP -> {
+                // The receiver used startForegroundService(), so we must call
+                // startForeground() promptly even though we're about to stop.
+                startForegroundService()
+                lifecycleScope.launch {
+                    saveAndStopHeadless()
+                }
+                return START_NOT_STICKY
+            }
+        }
+
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun createBatchesFolder(appSettings: AppSettings): AudioBatchesFolder =
+        when (appSettings.saveFolder) {
+            null -> AudioBatchesFolder.viaInternalFolder(this)
+            RECORDER_MEDIA_SELECTED_VALUE -> AudioBatchesFolder.viaMediaFolder(this)
+            else -> AudioBatchesFolder.viaCustomFolder(
+                this,
+                DocumentFile.fromTreeUri(this, Uri.parse(appSettings.saveFolder))!!
+            )
+        }
+
+    private suspend fun saveAndStopHeadless() {
+        if (state == RecorderState.IDLE) {
+            destroy()
+            return
+        }
+
+        // Stop first so the current (still-being-written) batch is flushed to disk
+        // and included in the concatenation.
+        runCatching { stopRecording() }
+
+        try {
+            val recording = getRecordingInformation()
+            val fileName = batchesFolder.getName(
+                recording.recordingStart,
+                recording.fileExtension,
+            )
+
+            batchesFolder.concatenate(
+                recording = recording,
+                filenameFormat = settings.filenameFormat,
+                fileName = fileName,
+            )
+
+            if (settings.deleteRecordingsImmediately) {
+                runCatching { batchesFolder.deleteRecordings() }
+            } else {
+                applicationContext.dataStore.updateData { it.setLastRecording(recording) }
+            }
+        } catch (error: Exception) {
+            error.printStackTrace()
+        } finally {
+            destroy()
+        }
     }
 
     // ==== Amplitude related ====
@@ -307,7 +398,7 @@ class AudioRecorderService :
             folderPath = batchesFolder.exportFolderForSettings(),
             recordingStart = recordingStart,
             maxDuration = settings.maxDuration,
-            batchesAmount = batchesFolder.getBatchesForFFmpeg().size,
+            batchesAmount = batchesFolder.getBatchCount(),
             fileExtension = settings.audioRecorderSettings.fileExtension,
             intervalDuration = settings.intervalDuration,
             type = RecordingInformation.Type.AUDIO,

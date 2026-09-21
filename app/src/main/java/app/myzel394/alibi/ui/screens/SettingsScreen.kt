@@ -50,9 +50,6 @@ import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.ImportExport
 import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.IntervalDurationTile
 import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.MaxDurationTile
 import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.SaveFolderTile
-import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.VideoRecorderBitrateTile
-import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.VideoRecorderFrameRateTile
-import app.myzel394.alibi.ui.components.SettingsScreen.Tiles.VideoRecorderQualityTile
 import app.myzel394.alibi.ui.components.SettingsScreen.atoms.InAppLanguagePicker
 import app.myzel394.alibi.ui.components.SettingsScreen.atoms.ThemeSelector
 import app.myzel394.alibi.ui.components.atoms.GlobalSwitch
@@ -60,7 +57,6 @@ import app.myzel394.alibi.ui.components.atoms.MessageBox
 import app.myzel394.alibi.ui.components.atoms.MessageType
 import app.myzel394.alibi.ui.effects.rememberSettings
 import app.myzel394.alibi.ui.models.AudioRecorderModel
-import app.myzel394.alibi.ui.models.VideoRecorderModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,7 +66,6 @@ fun SettingsScreen(
     onNavigateToCustomRecordingNotifications: () -> Unit,
     onNavigateToAboutScreen: () -> Unit,
     audioRecorder: AudioRecorderModel,
-    videoRecorder: VideoRecorderModel,
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
@@ -125,7 +120,7 @@ fun SettingsScreen(
             val settings = rememberSettings()
 
             // Show alert
-            if (audioRecorder.isInRecording || videoRecorder.isInRecording) {
+            if (audioRecorder.isInRecording) {
                 Box(
                     modifier = Modifier
                         .padding(16.dp)
@@ -179,14 +174,6 @@ fun SettingsScreen(
                             settings = settings
                         )
                         AudioRecorderOutputFormatTile(settings = settings)
-
-                        DividerTitle(
-                            title = stringResource(R.string.ui_settings_sections_video_title),
-                            description = stringResource(R.string.ui_settings_sections_video_description),
-                        )
-                        VideoRecorderQualityTile(settings = settings)
-                        VideoRecorderBitrateTile(settings = settings)
-                        VideoRecorderFrameRateTile(settings = settings)
                     }
                     HorizontalDivider(
                         modifier = Modifier

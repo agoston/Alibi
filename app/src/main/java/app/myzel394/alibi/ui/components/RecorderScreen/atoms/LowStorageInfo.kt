@@ -10,8 +10,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.myzel394.alibi.R
 import app.myzel394.alibi.db.AppSettings
+import app.myzel394.alibi.helpers.AudioBatchesFolder
 import app.myzel394.alibi.helpers.BatchesFolder
-import app.myzel394.alibi.helpers.VideoBatchesFolder
+import app.myzel394.alibi.ui.RECORDER_INTERNAL_SELECTED_VALUE
 import app.myzel394.alibi.ui.components.atoms.MessageBox
 import app.myzel394.alibi.ui.components.atoms.MessageType
 import app.myzel394.alibi.ui.components.atoms.VisualDensity
@@ -23,7 +24,10 @@ fun LowStorageInfo(
 ) {
     val context = LocalContext.current
     val availableBytes =
-        VideoBatchesFolder.importFromFolder(appSettings.saveFolder, context).getAvailableBytes()
+        AudioBatchesFolder.importFromFolder(
+            appSettings.saveFolder ?: RECORDER_INTERNAL_SELECTED_VALUE,
+            context,
+        ).getAvailableBytes()
 
     if (availableBytes == null) {
         return

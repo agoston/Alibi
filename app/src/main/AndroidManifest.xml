@@ -6,10 +6,6 @@
         android:name="android.hardware.microphone"
         android:required="false" />
 
-    <uses-feature
-        android:name="android.hardware.camera"
-        android:required="false" />
-
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -21,9 +17,6 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
-
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
 
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
@@ -68,12 +61,19 @@
             </intent-filter>
         </receiver>
 
+        <!-- Start / save & stop audio recording from external apps (e.g. Tasker) -->
+        <receiver
+            android:name=".receivers.RecorderIntentReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.myzel394.alibi.action.START_AUDIO_RECORDING" />
+                <action android:name="app.myzel394.alibi.action.STOP_AUDIO_RECORDING" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".services.AudioRecorderService"
             android:foregroundServiceType="microphone" />
-        <service
-            android:name=".services.VideoRecorderService"
-            android:foregroundServiceType="camera|microphone" />
 
         <!-- Change locale for Android <= 12 -->
         <service

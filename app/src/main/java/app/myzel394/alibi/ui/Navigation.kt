@@ -22,7 +22,6 @@ import androidx.navigation.compose.rememberNavController
 import app.myzel394.alibi.dataStore
 import app.myzel394.alibi.ui.enums.Screen
 import app.myzel394.alibi.ui.models.AudioRecorderModel
-import app.myzel394.alibi.ui.models.VideoRecorderModel
 import app.myzel394.alibi.ui.screens.AboutScreen
 import app.myzel394.alibi.ui.screens.CustomRecordingNotificationsScreen
 import app.myzel394.alibi.ui.screens.RecorderScreen
@@ -35,7 +34,6 @@ const val DEBUG_SKIP_WELCOME = false;
 @Composable
 fun Navigation(
     audioRecorder: AudioRecorderModel = viewModel(),
-    videoRecorder: VideoRecorderModel = viewModel(),
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -47,11 +45,9 @@ fun Navigation(
 
     DisposableEffect(Unit) {
         audioRecorder.bindToService(context)
-        videoRecorder.bindToService(context)
 
         onDispose {
             audioRecorder.unbindFromService(context)
-            videoRecorder.unbindFromService(context)
         }
     }
 
@@ -89,7 +85,6 @@ fun Navigation(
                     navController.navigate(Screen.Settings.route)
                 },
                 audioRecorder = audioRecorder,
-                videoRecorder = videoRecorder,
                 settings = settings,
             )
         }
@@ -109,7 +104,6 @@ fun Navigation(
                 },
                 onNavigateToAboutScreen = { navController.navigate(Screen.About.route) },
                 audioRecorder = audioRecorder,
-                videoRecorder = videoRecorder,
             )
         }
         composable(

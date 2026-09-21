@@ -29,7 +29,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import app.myzel394.alibi.R
 import app.myzel394.alibi.ui.RECORDER_MEDIA_SELECTED_VALUE
-import app.myzel394.alibi.ui.SUPPORTS_SAVING_VIDEOS_IN_CUSTOM_FOLDERS
 import app.myzel394.alibi.ui.components.atoms.MessageBox
 import app.myzel394.alibi.ui.components.atoms.MessageType
 import app.myzel394.alibi.ui.components.atoms.VisualDensity
@@ -166,23 +165,6 @@ fun SaveFolderSelection(
                             modifier = Modifier
                                 .size(ButtonDefaults.IconSize)
                         )
-                    }
-                    if (!SUPPORTS_SAVING_VIDEOS_IN_CUSTOM_FOLDERS) {
-                        Column(
-                            modifier = Modifier
-                                .padding(horizontal = 32.dp, vertical = 12.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Text(
-                                stringResource(R.string.ui_settings_option_saveFolder_videoUnsupported),
-                                fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                            )
-                            Text(
-                                stringResource(R.string.ui_minApiRequired, 8, 26),
-                                fontSize = MaterialTheme.typography.bodySmall.fontSize,
-                            )
-                        }
                     }
                 }
             }
