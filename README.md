@@ -20,6 +20,41 @@ Everything is completely configurable. No internet connection required.
 [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/app.myzel394.alibi)
 [<img src="readme_content/github-badge.webp" alt="Get it on GitHub" height="80">](https://github.com/Myzel394/Alibi/releases)
 
+# Automation intents
+
+Alibi can be controlled by automation apps such as Tasker by sending broadcast intents.
+These intents control audio recording only and do not open the Alibi app UI.
+
+Before using them, open Alibi once and grant the required microphone and notification permissions.
+For reliable background starts, also disable battery optimization for Alibi in Android settings.
+
+| Action | Effect |
+| --- | --- |
+| `app.myzel394.alibi.action.START_AUDIO_RECORDING` | Starts audio recording in the background. If recording is already running, nothing changes. |
+| `app.myzel394.alibi.action.STOP_AUDIO_RECORDING` | Saves the current recording using your Alibi settings, then stops recording. If no recording is running, Alibi just stops the background service. |
+
+## Tasker example
+
+Create a task with **Action Category: System -> Send Intent** and use these values:
+
+| Field | Value |
+| --- | --- |
+| Action | `app.myzel394.alibi.action.START_AUDIO_RECORDING` or `app.myzel394.alibi.action.STOP_AUDIO_RECORDING` |
+| Cat | `None` |
+| Mime Type | leave empty |
+| Data | leave empty |
+| Extra | leave empty |
+| Package | `app.myzel394.alibi` |
+| Class | leave empty |
+| Target | `Broadcast Receiver` |
+
+## ADB examples
+
+```sh
+adb shell am broadcast -p app.myzel394.alibi -a app.myzel394.alibi.action.START_AUDIO_RECORDING
+adb shell am broadcast -p app.myzel394.alibi -a app.myzel394.alibi.action.STOP_AUDIO_RECORDING
+```
+
 # Supporting Alibi
 
 You can support Alibi in various ways:
