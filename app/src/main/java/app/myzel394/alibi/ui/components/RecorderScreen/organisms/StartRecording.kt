@@ -53,6 +53,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
+@Suppress("DEPRECATION")
 fun StartRecording(
     audioRecorder: AudioRecorderModel,
     // Loading this from parent, because if we load it ourselves
@@ -121,7 +122,7 @@ fun StartRecording(
                 verticalArrangement = Arrangement.Bottom,
             ) {
                 if (appSettings.lastRecording?.hasRecordingsAvailable(context) == true) {
-                    val label = stringResource(
+                    val saveOldRecordingLabel = stringResource(
                         R.string.ui_recorder_action_saveOldRecording_label,
                         DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
                             .format(appSettings.lastRecording.recordingStart),
@@ -132,7 +133,7 @@ fun StartRecording(
                             .requiredWidthIn(max = BIG_PRIMARY_BUTTON_MAX_WIDTH)
                             .height(BIG_PRIMARY_BUTTON_SIZE)
                             .semantics {
-                                contentDescription = label
+                                contentDescription = saveOldRecordingLabel
                             },
                         onClick = onSaveLastRecording,
                         contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
@@ -143,7 +144,7 @@ fun StartRecording(
                             modifier = Modifier.size(ButtonDefaults.IconSize),
                         )
                         Spacer(modifier = Modifier.width(ButtonDefaults.IconSpacing))
-                        Text(label)
+                        Text(saveOldRecordingLabel)
                     }
                 } else {
                     androidx.compose.foundation.layout.Row(

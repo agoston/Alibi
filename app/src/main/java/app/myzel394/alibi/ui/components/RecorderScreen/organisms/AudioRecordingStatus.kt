@@ -152,7 +152,7 @@ fun _PrimitiveControls(audioRecorder: AudioRecorderModel) {
         onDelete = {
             scope.launch {
                 runCatching {
-                    audioRecorder.stopRecording(context)
+                    audioRecorder.stopRecording()
                 }
                 runCatching {
                     audioRecorder.destroyService(context)
@@ -169,9 +169,10 @@ fun _PrimitiveControls(audioRecorder: AudioRecorderModel) {
         },
         onSaveAndStop = {
             scope.launch {
-                audioRecorder.stopRecording(context)
+                audioRecorder.stopRecording()
 
                 dataStore.updateData {
+                    @Suppress("UNCHECKED_CAST")
                     it.saveLastRecording(audioRecorder as RecorderModel)
                 }
 

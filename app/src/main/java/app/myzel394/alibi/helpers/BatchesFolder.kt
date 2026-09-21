@@ -187,6 +187,13 @@ abstract class BatchesFolder(
         return "$name.$extension"
     }
 
+    fun getName(recording: RecordingInformation, filenameFormat: AppSettings.FilenameFormat): String {
+        return getName(
+            recording.getStartDateForFilename(filenameFormat),
+            recording.fileExtension,
+        )
+    }
+
     fun asInternalGetOutputFile(fileName: String): File {
         return File(getInternalFolder(), fileName)
     }
@@ -246,10 +253,11 @@ abstract class BatchesFolder(
         onProgress: (Float?) -> Unit = {},
         fileName: String,
     ): String {
-        val disableCache = disableCache ?: (type != BatchType.INTERNAL)
+        val shouldDisableCache = disableCache ?: (type != BatchType.INTERNAL)
+        val outputFileName = fileName.takeUnless { it.isBlank() } ?: getName(recording, filenameFormat)
 
-        if (!disableCache && checkIfOutputAlreadyExists(fileName)) {
-            return fileName
+        if (!shouldDisableCache && checkIfOutputAlreadyExists(outputFileName)) {
+            return outputFileName
         }
 
         onProgress(null)
@@ -257,7 +265,7 @@ abstract class BatchesFolder(
         withContext(Dispatchers.IO) {
             val inputs = getBatchInputStreams()
             val total = inputs.size.toFloat()
-            val output = openOutputStream(fileName, recording.fileExtension)
+            val output = openOutputStream(outputFileName, recording.fileExtension)
 
             MediaConverter.concatenateStreams(inputs, output) { batchesDone ->
                 if (total > 0) {
@@ -266,7 +274,7 @@ abstract class BatchesFolder(
             }
         }
 
-        return fileName
+        return outputFileName
     }
 
     fun exportFolderForSettings(): String {
@@ -547,12 +555,15 @@ abstract class BatchesFolder(
     }
 
     companion object {
-        fun requiredBytesForOneMinuteOfRecording(appSettings: AppSettings): Long {
+        fun requiredBytesForOneMinuteOfRecording(@Suppress("UNUSED_PARAMETER") appSettings: AppSettings): Long {
             // 350 MiB sounds like a good default
             return 350 * 1024 * 1024
         }
 
-        fun canAccessFolder(context: Context, uri: Uri): Boolean {
+        fun canAccessFolder(
+            @Suppress("UNUSED_PARAMETER") context: Context,
+            @Suppress("UNUSED_PARAMETER") uri: Uri,
+        ): Boolean {
             // This always returns false for some reason, let's just assume it's true
             return true
             /*
@@ -573,4 +584,3 @@ abstract class BatchesFolder(
         }
     }
 }
-

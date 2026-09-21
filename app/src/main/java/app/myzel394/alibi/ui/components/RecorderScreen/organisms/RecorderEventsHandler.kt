@@ -149,10 +149,7 @@ fun RecorderEventsHandler(
                         context
                     )
 
-                    val fileName = batchesFolder.getName(
-                        recording.recordingStart,
-                        recording.fileExtension,
-                    )
+                    val fileName = batchesFolder.getName(recording, settings.filenameFormat)
 
                     batchesFolder.concatenate(
                         recording,
@@ -216,6 +213,7 @@ fun RecorderEventsHandler(
         } else {
             previousAudioSettings = settings
             audioRecorder.onRecordingSave = { cleanupOldFiles ->
+                @Suppress("UNCHECKED_CAST")
                 saveRecording(audioRecorder as RecorderModel, cleanupOldFiles)
             }
             audioRecorder.onRecordingStart = {
@@ -223,10 +221,11 @@ fun RecorderEventsHandler(
             }
             audioRecorder.onError = {
                 scope.launch {
+                    @Suppress("UNCHECKED_CAST")
                     saveAsLastRecording(audioRecorder as RecorderModel)
 
                     runCatching {
-                        audioRecorder.stopRecording(context)
+                        audioRecorder.stopRecording()
                     }
                     runCatching {
                         audioRecorder.destroyService(context)
@@ -240,7 +239,7 @@ fun RecorderEventsHandler(
                     showBatchesInaccessibleError = true
 
                     runCatching {
-                        audioRecorder.stopRecording(context)
+                        audioRecorder.stopRecording()
                     }
                     runCatching {
                         audioRecorder.destroyService(context)

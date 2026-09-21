@@ -163,10 +163,7 @@ class AudioRecorderService :
 
         try {
             val recording = getRecordingInformation()
-            val fileName = batchesFolder.getName(
-                recording.recordingStart,
-                recording.fileExtension,
-            )
+            val fileName = batchesFolder.getName(recording, settings.filenameFormat)
 
             batchesFolder.concatenate(
                 recording = recording,
@@ -226,6 +223,7 @@ class AudioRecorderService :
     // ==== Audio device related ====
 
     /// Tell Android to use the correct bluetooth microphone, if any selected
+    @Suppress("DEPRECATION")
     private fun startAudioDevice() {
         if (selectedMicrophone == null) {
             return
@@ -240,6 +238,7 @@ class AudioRecorderService :
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun clearAudioDevice() {
         val audioManger = getSystemService(AUDIO_SERVICE)!! as AudioManager
 
@@ -254,6 +253,7 @@ class AudioRecorderService :
         "${batchesFolder.mediaPrefix}$counter.${settings.audioRecorderSettings.fileExtension}"
 
     // ==== Actual recording related ====
+    @Suppress("DEPRECATION")
     private fun createRecorder(): MediaRecorder {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(this)

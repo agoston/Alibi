@@ -66,6 +66,7 @@ abstract class BaseRecorderModel<I, B : BatchesFolder, T : IntervalRecorderServi
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            @Suppress("UNCHECKED_CAST")
             recorderService =
                 ((service as RecorderService.RecorderBinder).getService() as T).also { recorder ->
                     // Init variables from us to the service
@@ -164,7 +165,7 @@ abstract class BaseRecorderModel<I, B : BatchesFolder, T : IntervalRecorderServi
         context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
     }
 
-    suspend fun stopRecording(context: Context) {
+    suspend fun stopRecording() {
         recorderService!!.stopRecording()
     }
 
